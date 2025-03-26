@@ -12,7 +12,7 @@ namespace UnityPeekPlugin
     [HarmonyPatch(typeof(Debug))]
     class TestingPatch
     {
-        [HarmonyPatch(nameof(Debug.Log), new Type[] { typeof(object) })]
+        [HarmonyPatch(nameof(Debug.Log), new Type[] { typeof(object) })] //Todo switch to a more general method
         [HarmonyPostfix]
         static void Log_Postfix()
         {

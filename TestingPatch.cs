@@ -6,17 +6,17 @@ using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace UnityPeekPlugin
 {
-    [HarmonyPatch(typeof(Debug))]
+    [HarmonyPatch(typeof(SceneManager))]
     class TestingPatch
     {
-        [HarmonyPatch(nameof(Debug.Log), new Type[] { typeof(object) })] //Todo switch to a more general method
+        [HarmonyPatch(nameof(SceneManager.Internal_SceneLoaded))]
         [HarmonyPostfix]
-        static void Log_Postfix()
+        static void SceneLoaded_Postfix()
         {
-            Debug.LogError("This is a test log message");
 
             if(UnityEngine.Object.FindObjectOfType<UnityPeekController>())
             {

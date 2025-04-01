@@ -75,9 +75,9 @@ namespace UnityPeekPlugin
         public static void CreateConfig()
         {
             string configFile = "" +
-                "## The IP address the server will run on (the IP you connect to inside UnityPeek)"
-                + "IP=192.168.1.1"
-                + "## The port the server will run on"
+                "## The IP address the server will run on (the IP you connect to inside UnityPeek)\n"
+                + "IP=192.168.1.1\n"
+                + "## The port the server will run on\n"
                 + "port=6500";
 
 

@@ -12,7 +12,7 @@ namespace UnityPeekPlugin
         public static string port = "6500";
         public static string IP = "192.168.1.1";
 
-
+        //Gets the config directory, next to the dll inside the plugins folder
         public static string getConfigDir()
         {
             string dllPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
@@ -27,7 +27,7 @@ namespace UnityPeekPlugin
             string configPath = getConfigDir();
             if (System.IO.File.Exists(configPath))
             {
-                //Load the config
+                //Load the config by looping over all of the lines, ignoring # and reading key value pairs
                 string[] lines = System.IO.File.ReadAllLines(configPath);
                 foreach (string line in lines)
                 {
@@ -72,6 +72,7 @@ namespace UnityPeekPlugin
 
         }
 
+        //Creates the config file with default values
         public static void CreateConfig()
         {
             string configFile = "" +

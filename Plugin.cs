@@ -11,7 +11,6 @@ public class Plugin : BaseUnityPlugin
 {
     internal static new ManualLogSource Logger;
 
-    public static int counter = 0;
 
     private void Awake()
     {
@@ -22,12 +21,10 @@ public class Plugin : BaseUnityPlugin
         ConfigManager.LoadConfig();
 
 
-        Harmony Harmony = new Harmony("com.cookie.unitypeekplugin");
-        Logger.LogInfo("About to patch harmony");
+        Harmony Harmony = new Harmony("com.UnityPeekPlugin.UnityPeekPlugin");
+        Logger.LogInfo("About to patch Harmony");
         Harmony.PatchAll();  // This will apply all Harmony patches in the assembly
-        Logger.LogInfo("UnityPeek patch applied! WEEEE DID ITTTTT!!!!!");
-
-       
+        Logger.LogInfo("UnityPeek patch applied! Welcome to UnityPeek");
         Logger.LogInfo("Loaded UnityPeek");
     }
 }

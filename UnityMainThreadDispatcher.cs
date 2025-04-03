@@ -9,6 +9,7 @@ namespace UnityPeekPlugin
 {
 
     //Main Thread dispacher https://github.com/PimDeWitte/UnityMainThreadDispatcher
+    //Used for calling Unity functions from other threads (like the network thread)
 
     public class UnityMainThreadDispatcher : MonoBehaviour
     {

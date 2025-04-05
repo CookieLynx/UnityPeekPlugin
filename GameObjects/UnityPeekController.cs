@@ -47,14 +47,17 @@ namespace UnityPeekPlugin.GameObjects
             root.name = "Root";
             root.id = "-1";
 
+            Plugin.Logger.LogInfo("Total number of transforms in the scene: " + transforms.Length);
 
             foreach (Transform t in transforms)
             {
+
                 //setup each object to have a node on it, by default it will be a child of the root node
                 Helpers.HierachyStructure node = new Helpers.HierachyStructure();
                 node.name = t.name;
                 node.id = t.GetInstanceID().ToString();
                 node.parent = root;
+                node.siblingIndex = t.GetSiblingIndex();
                 root.children.Add(node);
             }
 
@@ -81,6 +84,7 @@ namespace UnityPeekPlugin.GameObjects
                         Helpers.HierachyStructure parent = Array.Find(root.children.ToArray(), x => x.id == parentTransform.GetInstanceID().ToString());
                         if (parent != null)
                         {
+                            node.siblingIndex = t.GetSiblingIndex();
                             node.parent = parent;
                             parent.children.Add(node);
                         }
@@ -96,7 +100,6 @@ namespace UnityPeekPlugin.GameObjects
             Plugin.Logger.LogInfo("Serialized");
             chunks = bytes;
             Plugin.Logger.LogInfo("Chunks Made");
-
             Plugin.Logger.LogInfo(chunks.Length);
             unityPeekNetworking.SendChunks(chunks);
         }
@@ -132,6 +135,7 @@ namespace UnityPeekPlugin.GameObjects
             }
         }
 
+
         private void WriteNode(BinaryWriter writer, Helpers.HierachyStructure node)
         {
             try
@@ -141,6 +145,8 @@ namespace UnityPeekPlugin.GameObjects
                 //Plugin.Logger.LogInfo("Writing Node Name!");
                 writer.Write(node.id);
                 //Plugin.Logger.LogInfo("Writing Node ID!");
+                writer.Write(node.siblingIndex);
+
                 writer.Write(node.children.Count); // Write number of children
                 //Plugin.Logger.LogInfo("Writing Child Count");
 

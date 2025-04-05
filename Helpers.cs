@@ -16,6 +16,7 @@ namespace UnityPeekPlugin
         {
             public string name;
             public string id;
+            public int siblingIndex;
             public HierachyStructure parent;
             public List<HierachyStructure> children = new List<HierachyStructure>();
         }
@@ -36,6 +37,7 @@ namespace UnityPeekPlugin
             {
                 name = reader.ReadString(),
                 id = reader.ReadString(),
+                siblingIndex = reader.ReadInt32(),
                 children = new List<Helpers.HierachyStructure>()
             };
 

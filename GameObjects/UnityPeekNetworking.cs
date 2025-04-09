@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using UnityEngine;
 using System.Threading;
+using System.IO;
 
 namespace UnityPeekPlugin.GameObjects
 {
@@ -108,6 +109,8 @@ namespace UnityPeekPlugin.GameObjects
             socketThread.Start();
         }
 
+        private byte[] dataToSend = null;
+
         private byte[] chunks;
         public void SendChunks(byte[] chunks)
         {
@@ -148,6 +151,17 @@ namespace UnityPeekPlugin.GameObjects
 
             while (isRunning)
             {
+
+                if (dataToSend != null)
+                {
+                    typeBytes = BitConverter.GetBytes(3); //Transform type
+                    data = dataToSend; //Our message
+                    packet = new byte[typeBytes.Length + data.Length]; //Make the packet the size of the type and data
+                    Array.Copy(typeBytes, 0, packet, 0, typeBytes.Length); //Copy the type bytes to the packet
+                    Array.Copy(data, 0, packet, typeBytes.Length, data.Length); //Copy the data bytes to the packet
+                    stream.Write(packet, 0, packet.Length); //Send the packet to the client
+                }
+
                 packet = SendHierachy(stream, packet);
 
                 //if(testChunks.Length > 0)
@@ -165,6 +179,7 @@ namespace UnityPeekPlugin.GameObjects
                 //Decode the received data
                 if (stream.DataAvailable)
                 {
+
                     int bytesRead = stream.Read(buffer, 0, buffer.Length);
                     if (bytesRead > 0)
                     {
@@ -235,15 +250,66 @@ namespace UnityPeekPlugin.GameObjects
                 Debug.Log($"Received: {received}");
             });
 
-            switch (received)
+            string type;
+            string[] parts = new string[0];
+            if (!received.Contains(':'))
+            {
+                type = received;
+            }
+            else
+            {
+                //split the stuff before the :
+                parts = received.Split(':');
+                type = parts[0];
+            }
+
+            switch (type)
             {
                 case "FetchHierarchy":
                     // Do something
                     unityPeekController.FetchHierachy();
                     break;
+                case "SelectedNode":
+                    unityPeekController.SelectedNode(parts[1]);
+                    break;
                 default:
+                    Plugin.Logger.LogInfo("Unknown data recieved");
                     // Do something else
                     break;
+            }
+        }
+
+
+        public void SendObject(Transform transformToTransmit)
+        {
+            // Serialize the position, rotation, and scale of the transform into bytes
+            Vector3 position = transformToTransmit.position;
+            Quaternion rotation = transformToTransmit.rotation;
+            Vector3 scale = transformToTransmit.localScale;
+
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                using (BinaryWriter writer = new BinaryWriter(memoryStream))
+                {
+                    // Write position
+                    writer.Write(position.x);
+                    writer.Write(position.y);
+                    writer.Write(position.z);
+
+                    // Write rotation
+                    writer.Write(rotation.x);
+                    writer.Write(rotation.y);
+                    writer.Write(rotation.z);
+                    writer.Write(rotation.w);
+
+                    // Write scale
+                    writer.Write(scale.x);
+                    writer.Write(scale.y);
+                    writer.Write(scale.z);
+                }
+
+                // Assign serialized data to dataToSend
+                dataToSend = memoryStream.ToArray();
             }
         }
     }

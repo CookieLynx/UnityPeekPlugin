@@ -28,9 +28,41 @@ namespace UnityPeekPlugin.GameObjects
             Debug.LogError("UnityPeek Object attached and running!");
 
         }
+
+        private bool shouldBeTransmitting = false;
+
+        private Transform itemToTransmit;
+
+        public float sendInterval = 0.5f;
+
+        private float lastSendTime = 0f;
+
+
         void Update()
         {
             transform.Rotate(Vector3.up * Time.deltaTime * 20f);
+            
+            if(shouldBeTransmitting)
+            {
+                //Check if we are past the send interval
+                if (lastSendTime + sendInterval < Time.time)
+                {
+                    lastSendTime = Time.time;
+                    if (itemToTransmit != null)
+                    {
+                        Plugin.Logger.LogError(itemToTransmit.name);
+                        Plugin.Logger.LogError(itemToTransmit.rotation);
+                        //Plugin.Logger.LogInfo("Transmitting: " + itemToTransmit.name);
+                        unityPeekNetworking.SendObject(itemToTransmit);
+                    } else
+                    {
+                        shouldBeTransmitting = false;
+                    }
+                }
+            }
+            
+
+
         }
 
         private byte[] chunks;
@@ -103,7 +135,37 @@ namespace UnityPeekPlugin.GameObjects
             Plugin.Logger.LogInfo(chunks.Length);
             unityPeekNetworking.SendChunks(chunks);
         }
-        
+
+
+
+        public void SelectedNode(string id)
+        {
+            int idInt = int.Parse(id);
+
+            Plugin.Logger.LogInfo("Selected Node ID: " + idInt);
+
+            UnityEngine.Object foundObject = Helpers.FindObjectFromInstanceID(idInt);
+            if(foundObject == null)
+            {
+                Plugin.Logger.LogError("Found Object is null");
+                return;
+            }
+
+            Transform foundTransform = foundObject as Transform;
+
+            if (foundTransform == null)
+            {
+                Plugin.Logger.LogError("Found Transform is null");
+                return;
+            }
+
+            itemToTransmit = foundTransform;
+            shouldBeTransmitting = true;
+
+
+
+        }
+
 
 
 

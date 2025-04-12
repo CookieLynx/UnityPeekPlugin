@@ -1,7 +1,9 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.Mono;
+using BepInEx.Bootstrap;
 using HarmonyLib;
+using System;
 
 namespace UnityPeekPlugin;
 
@@ -15,6 +17,23 @@ public class Plugin : BaseUnityPlugin
 	{
 		// Plugin startup logic
 		Logger = base.Logger;
+
+
+		var path = @"BepInEx/core/BepInEx.Core.dll";
+		var version = System.Diagnostics.FileVersionInfo.GetVersionInfo(path).FileVersion;
+		Console.WriteLine("BepInEx version: " + version);
+        //if the version is less then 6.0.0.0 log an error
+        if (Version.TryParse(version, out var parsedVersion) && parsedVersion < new Version(6, 0, 0, 0))
+        {
+            Logger.LogError("BepInEx version is less than 6.0.0.0. Please update to 6.0.0.0. or greater");
+            throw new InvalidOperationException("Unsupported BepInEx version. Plugin cannot be loaded.");
+        }
+		
+
+
+
+
+
 		Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
 
 		ConfigManager.LoadConfig();

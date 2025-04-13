@@ -290,9 +290,10 @@ namespace UnityPeekPlugin.GameObjects
 			}
 		}
 
-
+		static int timeStamp = 0;
 		public void SendObject(Transform transformToTransmit)
 		{
+			timeStamp++;
 			// Serialize the position, rotation, and scale of the transform into bytes
 			Vector3 position = transformToTransmit.position;
 			Quaternion rotation = transformToTransmit.rotation;
@@ -303,7 +304,7 @@ namespace UnityPeekPlugin.GameObjects
 				using (BinaryWriter writer = new BinaryWriter(memoryStream))
 				{
 					// Write position
-					writer.Write(position.x);
+					writer.Write((float)timeStamp);
 					writer.Write(position.y);
 					writer.Write(position.z);
 
@@ -322,6 +323,8 @@ namespace UnityPeekPlugin.GameObjects
 				// Assign serialized data to dataToSend
 				dataToSend = memoryStream.ToArray();
 			}
+
+			Plugin.Logger.LogError("TIMESTAMP SENT: " + timeStamp);
 		}
 	}
 }

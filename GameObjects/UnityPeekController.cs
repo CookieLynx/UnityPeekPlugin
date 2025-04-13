@@ -30,7 +30,7 @@ namespace UnityPeekPlugin.GameObjects
 
 		private Transform itemToTransmit;
 
-		public float sendInterval = 0.5f;
+		public float sendInterval = 5f;
 
 		private float lastSendTime = 0f;
 

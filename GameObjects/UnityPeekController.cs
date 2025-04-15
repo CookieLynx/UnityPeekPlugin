@@ -26,11 +26,11 @@ namespace UnityPeekPlugin.GameObjects
 
 		}
 
-		private bool shouldBeTransmitting = false;
+		public bool shouldBeTransmitting = false;
 
 		private Transform itemToTransmit;
 
-		public float sendInterval = 5f;
+		public float sendInterval = 0.5f;
 
 		private float lastSendTime = 0f;
 
@@ -47,8 +47,8 @@ namespace UnityPeekPlugin.GameObjects
 					lastSendTime = Time.time;
 					if (itemToTransmit != null)
 					{
-						Plugin.Logger.LogError(itemToTransmit.name);
-						Plugin.Logger.LogError(itemToTransmit.rotation);
+						//Plugin.Logger.LogError(itemToTransmit.name);
+						//Plugin.Logger.LogError(itemToTransmit.rotation);
 						//Plugin.Logger.LogInfo("Transmitting: " + itemToTransmit.name);
 						unityPeekNetworking.SendObject(itemToTransmit);
 					}

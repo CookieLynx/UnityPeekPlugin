@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using UnityEngine;
@@ -122,6 +123,23 @@ namespace UnityPeekPlugin.GameObjects
 		bool sendChunks = false;
 
 
+		private void SendPacket(byte[] packet, NetworkStream stream)
+		{
+			int length = packet.Length;
+			//Plugin.Logger.LogError("THE LENGTH OF THE PACKET IS: " + length);
+
+			byte[] lengthBytes = BitConverter.GetBytes(length); // First 4 bytes = message length
+			byte[] packetWithLength = new byte[lengthBytes.Length + packet.Length];
+
+			// Put together the full packet
+			Array.Copy(lengthBytes, 0, packetWithLength, 0, lengthBytes.Length);      // Length
+			Array.Copy(packet, 0, packetWithLength, lengthBytes.Length, packet.Length); // Message (starting with type ID)
+
+			// Now write the full packet
+			stream.Write(packetWithLength, 0, packetWithLength.Length);
+		}
+
+
 		void HandleClient(TcpClient client)
 		{
 			NetworkStream stream = client.GetStream();
@@ -135,8 +153,8 @@ namespace UnityPeekPlugin.GameObjects
 			byte[] packet = new byte[typeBytes.Length + data.Length]; //Make the packet the size of the type and data
 			Array.Copy(typeBytes, 0, packet, 0, typeBytes.Length); //Copy the type bytes to the packet
 			Array.Copy(data, 0, packet, typeBytes.Length, data.Length); //Copy the data bytes to the packet
-			stream.Write(packet, 0, packet.Length); //Send the packet to the client
-
+																		//stream.Write(packet, 0, packet.Length); //Send the packet to the client
+			SendPacket(packet, stream);
 
 			UnityMainThreadDispatcher.Instance().Enqueue(() =>
 			{
@@ -163,7 +181,9 @@ namespace UnityPeekPlugin.GameObjects
 					packet = new byte[typeBytes.Length + data.Length]; //Make the packet the size of the type and data
 					Array.Copy(typeBytes, 0, packet, 0, typeBytes.Length); //Copy the type bytes to the packet
 					Array.Copy(data, 0, packet, typeBytes.Length, data.Length); //Copy the data bytes to the packet
-					stream.Write(packet, 0, packet.Length); //Send the packet to the client
+					//stream.Write(packet, 0, packet.Length); //Send the packet to the client
+					SendPacket(packet, stream);
+					dataToSend = null; //Reset the data to send
 				}
 
 				packet = SendHierachy(stream, packet);
@@ -197,6 +217,7 @@ namespace UnityPeekPlugin.GameObjects
 			}
 
 			client.Close();
+			unityPeekController.shouldBeTransmitting = false;
 			UnityMainThreadDispatcher.Instance().Enqueue(() =>
 			{
 				Debug.LogError("Client disconnected.");
@@ -228,7 +249,8 @@ namespace UnityPeekPlugin.GameObjects
 				Plugin.Logger.LogInfo("Sending Data");
 				try
 				{
-					stream.Write(packet, 0, packet.Length);
+					//stream.Write(packet, 0, packet.Length);
+					SendPacket(packet, stream);
 				}
 				catch (Exception e)
 				{
@@ -304,7 +326,8 @@ namespace UnityPeekPlugin.GameObjects
 				using (BinaryWriter writer = new BinaryWriter(memoryStream))
 				{
 					// Write position
-					writer.Write((float)timeStamp);
+					//writer.Write((float)timeStamp);
+					writer.Write(position.x);
 					writer.Write(position.y);
 					writer.Write(position.z);
 
@@ -324,7 +347,7 @@ namespace UnityPeekPlugin.GameObjects
 				dataToSend = memoryStream.ToArray();
 			}
 
-			Plugin.Logger.LogError("TIMESTAMP SENT: " + timeStamp);
+			//Plugin.Logger.LogError("TIMESTAMP SENT: " + timeStamp);
 		}
 	}
 }

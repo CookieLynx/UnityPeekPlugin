@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace UnityPeekPlugin.GameObjects
 {
@@ -63,6 +64,62 @@ namespace UnityPeekPlugin.GameObjects
 
 		}
 
+
+		public static List<Transform> GetAllTransformsIncludingInactiveAndDontDestroy()
+		{
+			List<Transform> transforms = new List<Transform>();
+
+			// Step 1: Get all regular scene objects
+			for (int i = 0; i < SceneManager.sceneCount; i++)
+			{
+				Scene scene = SceneManager.GetSceneAt(i);
+				if (!scene.isLoaded) continue;
+
+				GameObject[] rootObjects = scene.GetRootGameObjects();
+				foreach (GameObject root in rootObjects)
+				{
+					AddAllChildTransforms(root.transform, transforms);
+				}
+			}
+
+			// Step 2: Get DontDestroyOnLoad objects (black magic trick)
+			transforms.AddRange(GetDontDestroyOnLoadTransforms());
+
+			return transforms;
+		}
+
+		private static void AddAllChildTransforms(Transform parent, List<Transform> list)
+		{
+			list.Add(parent);
+			foreach (Transform child in parent)
+			{
+				AddAllChildTransforms(child, list);
+			}
+		}
+
+		private static List<Transform> GetDontDestroyOnLoadTransforms()
+		{
+			List<Transform> ddolTransforms = new List<Transform>();
+
+			GameObject temp = new GameObject("TempSceneProbe");
+			DontDestroyOnLoad(temp);
+
+			Scene ddolScene = temp.scene;
+
+			GameObject[] allRoots = ddolScene.GetRootGameObjects();
+			foreach (GameObject root in allRoots)
+			{
+				if (root.name == "TempSceneProbe") continue;
+				AddAllChildTransforms(root.transform, ddolTransforms);
+			}
+
+			DestroyImmediate(temp); // Clean up
+
+			return ddolTransforms;
+		}
+
+
+
 		private byte[] chunks;
 		Helpers.HierachyStructure root;
 		//This function is called to fetch the hierarchy of the game objects in the scene
@@ -73,7 +130,9 @@ namespace UnityPeekPlugin.GameObjects
 		{
 			//Root node
 			root = new Helpers.HierachyStructure();
-			Transform[] transforms = FindObjectsOfType<Transform>();
+			//Transform[] transforms = FindObjectsOfType<Transform>();
+			List<Transform> allTransforms = GetAllTransformsIncludingInactiveAndDontDestroy();
+			Transform[] transforms = allTransforms.ToArray(); // Convert List to array
 			root.name = "Root";
 			root.id = "-1";
 
@@ -162,6 +221,38 @@ namespace UnityPeekPlugin.GameObjects
 
 
 
+		}
+
+		public void ToggleTransformActive(string id, string enabled)
+		{
+			int idInt = int.Parse(id);
+			UnityEngine.Object foundObject = Helpers.FindObjectFromInstanceID(idInt);
+			if (foundObject == null)
+			{
+				Plugin.Logger.LogError("Found Object is null");
+				return;
+			}
+
+			Transform foundTransform = foundObject as Transform;
+
+			if (foundTransform == null)
+			{
+				Plugin.Logger.LogError("Found Transform is null");
+				return;
+			}
+
+
+			if(enabled == "True")
+			{
+				Plugin.Logger.LogInfo("Enabling Transform: " + foundTransform.name);
+				foundTransform.gameObject.SetActive(true);
+			}
+			else
+			{
+				Plugin.Logger.LogInfo("Disabling Transform: " + foundTransform.name);
+				foundTransform.gameObject.SetActive(false);
+			}
+			
 		}
 
 

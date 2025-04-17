@@ -305,6 +305,9 @@ namespace UnityPeekPlugin.GameObjects
 				case "SelectedNode":
 					unityPeekController.SelectedNode(parts[1]);
 					break;
+				case "ToggleTransformActive":
+					unityPeekController.ToggleTransformActive(parts[1], parts[2]);
+					break;
 				default:
 					Plugin.Logger.LogInfo("Unknown data recieved");
 					// Do something else
@@ -327,6 +330,10 @@ namespace UnityPeekPlugin.GameObjects
 				{
 					// Write position
 					//writer.Write((float)timeStamp);
+
+					writer.Write(transformToTransmit.name);
+					writer.Write(transformToTransmit.gameObject.activeSelf);
+
 					writer.Write(position.x);
 					writer.Write(position.y);
 					writer.Write(position.z);

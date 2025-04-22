@@ -242,6 +242,25 @@
 			}
 		}
 
+		public void DeleteSelectedNode(string id)
+		{
+			int idInt = int.Parse(id);
+			UnityEngine.Object foundObject = Helpers.FindObjectFromInstanceID(idInt);
+			if (foundObject == null)
+			{
+				Plugin.Logger.LogError("Found Object is null");
+				return;
+			}
+			Transform foundTransform = foundObject as Transform;
+			if (foundTransform == null)
+			{
+				Plugin.Logger.LogError("Found Transform is null");
+				return;
+			}
+			Plugin.Logger.LogInfo("Deleting Transform: " + foundTransform.name);
+			GameObject.Destroy(foundTransform.gameObject);
+		}
+
 		/// <summary>
 		/// Prints the hierarchy of the game objects in the scene.
 		/// </summary>

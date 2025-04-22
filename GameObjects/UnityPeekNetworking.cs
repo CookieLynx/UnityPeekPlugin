@@ -281,6 +281,9 @@
 				case "ToggleTransformActive":
 					this.UnityPeekController.ToggleTransformActive(parts[1], parts[2]);
 					break;
+				case "DeleteSelectedNode":
+					this.UnityPeekController.DeleteSelectedNode(parts[1]);
+					break;
 				default:
 					Plugin.Logger.LogInfo("Unknown data recieved");
 

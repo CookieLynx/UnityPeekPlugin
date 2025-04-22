@@ -1,34 +1,39 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
-using System.Threading;
-using UnityEngine;
-
-namespace UnityPeekPlugin.GameObjects
+﻿namespace UnityPeekPlugin.GameObjects
 {
-	class UnityPeekNetworking : MonoBehaviour
-	{
+	using System;
+	using System.IO;
+	using System.Linq;
+	using System.Net;
+	using System.Net.Sockets;
+	using System.Text;
+	using System.Threading;
+	using UnityEngine;
 
-		private UnityPeekController unityPeekController;
+	public class UnityPeekNetworking : MonoBehaviour
+	{
+		public UnityPeekController UnityPeekController;
+		private static int timeStamp = 0;
+		private TcpListener server;
+		private Thread socketThread;
+		private bool isRunning = false;
+		private byte[] dataToSend = null;
+		private byte[] chunks;
+		private bool sendChunks = false;
 
 		public void SetUnityPeekController(UnityPeekController controller)
 		{
-			unityPeekController = controller;
+			this.UnityPeekController = controller;
 		}
 
-
-		void Start()
+		public void Start()
 		{
 			Debug.LogError("UnityPeek Networking Object attached and running!");
-			//get the local address
-			string localIP = GetLocalIPAddress();
+
+			// get the local address
+			string localIP = this.GetLocalIPAddress();
 			Debug.LogError("Local IP: " + localIP);
-			Debug.LogError("Using IP " + ConfigManager.IP + ":" + ConfigManager.port);
-			StartSocketServer(ConfigManager.IP, ConfigManager.port);
+			Debug.LogError("Using IP " + ConfigManager.IP + ":" + ConfigManager.Port);
+			this.StartSocketServer(ConfigManager.IP, ConfigManager.Port);
 		}
 
 		private string GetLocalIPAddress()
@@ -41,58 +46,52 @@ namespace UnityPeekPlugin.GameObjects
 					return ip.ToString();
 				}
 			}
+
 			Debug.LogError("No network adapters with an IPv4 address found.");
 			throw new Exception("No network adapters with an IPv4 address found.");
-
 		}
-
-		private TcpListener server;
-		private Thread socketThread;
-		private bool isRunning = false;
-
 
 		public void StartSocketServer(string address, string stringPort)
 		{
+			this.isRunning = true;
 
-			isRunning = true;
-
-			socketThread = new Thread(() =>
+			this.socketThread = new Thread(() =>
 			{
 				try
 				{
-					//Using the main thread dispatcher to log to the console
+					// Using the main thread dispatcher to log to the console
 					UnityMainThreadDispatcher.Instance().Enqueue(() =>
 					{
 						Debug.LogError("Starting socket server...");
 					});
 
-
 					int port = int.Parse(stringPort);
 
 					// Start listening for connections
-					server = new TcpListener(IPAddress.Parse(address), port);
-					server.Start();
+					this.server = new TcpListener(IPAddress.Parse(address), port);
+					this.server.Start();
 					UnityMainThreadDispatcher.Instance().Enqueue(() =>
 					{
 						Debug.LogError($"Server started on {address}:{port}");
 					});
 
-					//Check if the server is running
-					while (isRunning)
+					// Check if the server is running
+					while (this.isRunning)
 					{
-						if (server.Pending())
+						if (this.server.Pending())
 						{
-							TcpClient client = server.AcceptTcpClient();
+							TcpClient client = this.server.AcceptTcpClient();
 							UnityMainThreadDispatcher.Instance().Enqueue(() =>
 							{
 								Debug.Log("Client connected!");
 							});
 
 							// Handle the client in a separate thread
-							Thread clientThread = new Thread(() => HandleClient(client));
+							Thread clientThread = new Thread(() => this.HandleClient(client));
 							clientThread.IsBackground = true;
 							clientThread.Start();
 						}
+
 						Thread.Sleep(10); // Avoid high CPU usage
 					}
 				}
@@ -105,29 +104,23 @@ namespace UnityPeekPlugin.GameObjects
 				}
 			});
 
-			socketThread.IsBackground = true;
-			socketThread.Start();
+			this.socketThread.IsBackground = true;
+			this.socketThread.Start();
 		}
 
-		private byte[] dataToSend = null;
-
-		private byte[] chunks;
 		public void SendChunks(byte[] chunks)
 		{
-			//sendChunks = true;
-			//this.chunks = chunks;
+			// sendChunks = true;
+			// this.chunks = chunks;
 			this.chunks = chunks;
-			sendChunks = true;
+			this.sendChunks = true;
 		}
-
-		bool sendChunks = false;
-
 
 		private void SendPacket(byte[] packet, NetworkStream stream)
 		{
 			int length = packet.Length;
-			//Plugin.Logger.LogError("THE LENGTH OF THE PACKET IS: " + length);
 
+			// Plugin.Logger.LogError("THE LENGTH OF THE PACKET IS: " + length);
 			byte[] lengthBytes = BitConverter.GetBytes(length); // First 4 bytes = message length
 			byte[] packetWithLength = new byte[lengthBytes.Length + packet.Length];
 
@@ -139,85 +132,67 @@ namespace UnityPeekPlugin.GameObjects
 			stream.Write(packetWithLength, 0, packetWithLength.Length);
 		}
 
-
-		void HandleClient(TcpClient client)
+		private void HandleClient(TcpClient client)
 		{
 			NetworkStream stream = client.GetStream();
 			byte[] buffer = new byte[1024];
 
 			// Send initial response
+			byte[] typeBytes = BitConverter.GetBytes(0); // String type
+			byte[] data = Encoding.ASCII.GetBytes("Hello UnityPeek!"); // Our message
+			byte[] packet = new byte[typeBytes.Length + data.Length]; // Make the packet the size of the type and data
+			Array.Copy(typeBytes, 0, packet, 0, typeBytes.Length); // Copy the type bytes to the packet
+			Array.Copy(data, 0, packet, typeBytes.Length, data.Length); // Copy the data bytes to the packet
 
-
-			byte[] typeBytes = BitConverter.GetBytes(0); //String type
-			byte[] data = Encoding.ASCII.GetBytes("Hello UnityPeek!"); //Our message
-			byte[] packet = new byte[typeBytes.Length + data.Length]; //Make the packet the size of the type and data
-			Array.Copy(typeBytes, 0, packet, 0, typeBytes.Length); //Copy the type bytes to the packet
-			Array.Copy(data, 0, packet, typeBytes.Length, data.Length); //Copy the data bytes to the packet
-																		//stream.Write(packet, 0, packet.Length); //Send the packet to the client
-			SendPacket(packet, stream);
+			// stream.Write(packet, 0, packet.Length); //Send the packet to the client
+			this.SendPacket(packet, stream);
 
 			UnityMainThreadDispatcher.Instance().Enqueue(() =>
 			{
 				Debug.Log("Sent greeting to UnityPeek!");
 			});
 
-
-
-
-
-
-			while (isRunning)
+			while (this.isRunning)
 			{
 				if (client.Client.Poll(0, SelectMode.SelectRead) && client.Client.Available == 0)
 				{
 					break;
 				}
 
-
-				if (dataToSend != null)
+				if (this.dataToSend != null)
 				{
-					typeBytes = BitConverter.GetBytes(3); //Transform type
-					data = dataToSend; //Our message
-					packet = new byte[typeBytes.Length + data.Length]; //Make the packet the size of the type and data
-					Array.Copy(typeBytes, 0, packet, 0, typeBytes.Length); //Copy the type bytes to the packet
-					Array.Copy(data, 0, packet, typeBytes.Length, data.Length); //Copy the data bytes to the packet
-					//stream.Write(packet, 0, packet.Length); //Send the packet to the client
-					SendPacket(packet, stream);
-					dataToSend = null; //Reset the data to send
+					typeBytes = BitConverter.GetBytes(3); // Transform type
+					data = this.dataToSend; // Our message
+					packet = new byte[typeBytes.Length + data.Length]; // Make the packet the size of the type and data
+					Array.Copy(typeBytes, 0, packet, 0, typeBytes.Length); // Copy the type bytes to the packet
+					Array.Copy(data, 0, packet, typeBytes.Length, data.Length); // Copy the data bytes to the packet
+
+					// stream.Write(packet, 0, packet.Length); //Send the packet to the client
+					this.SendPacket(packet, stream);
+					this.dataToSend = null; // Reset the data to send
 				}
 
-				packet = SendHierachy(stream, packet);
+				packet = this.SendHierachy(stream, packet);
 
-				//if(testChunks.Length > 0)
-				//{
-				//Plugin.Logger.LogInfo("Sending a chunk");
-				//byte[] chunk = chunks[0];
-				//stream.Write(chunk, 0, chunk.Length);
-				//stream.Write(testChunks, 0, testChunks.Length);
-				//chunks.RemoveAt(0);
-				//testChunks.
-				//}
-
-
-
-				//Decode the received data
+				// Decode the received data
 				if (stream.DataAvailable)
 				{
-
 					int bytesRead = stream.Read(buffer, 0, buffer.Length);
 					if (bytesRead > 0)
 					{
-						DecodeRecivedData(buffer, bytesRead);
+						this.DecodeRecivedData(buffer, bytesRead);
+
 						// Echo message back to client
-						//byte[] responseData = Encoding.ASCII.GetBytes($"Server Received: {received}");
-						//stream.Write(responseData, 0, responseData.Length);
+						// byte[] responseData = Encoding.ASCII.GetBytes($"Server Received: {received}");
+						// stream.Write(responseData, 0, responseData.Length);
 					}
 				}
+
 				Thread.Sleep(10);
 			}
 
 			client.Close();
-			unityPeekController.shouldBeTransmitting = false;
+			this.UnityPeekController.ShouldBeTransmitting = false;
 			UnityMainThreadDispatcher.Instance().Enqueue(() =>
 			{
 				Debug.LogError("Client disconnected.");
@@ -225,38 +200,37 @@ namespace UnityPeekPlugin.GameObjects
 		}
 
 		/// <summary>
-		/// Sends the hierarchy data to the client in chunks
+		/// Sends the hierarchy data to the client in chunks.
 		/// </summary>
-		/// <param name="stream">Network Stream</param>
-		/// <param name="packet">The packet that contains the serialized node data</param>
-		/// <returns></returns>
+		/// <param name="stream">Network Stream.</param>
+		/// <param name="packet">The packet that contains the serialized node data.</param>
+		/// <returns>The bytes that will be sent.</returns>
 		private byte[] SendHierachy(NetworkStream stream, byte[] packet)
 		{
-			if (sendChunks)
+			if (this.sendChunks)
 			{
-				sendChunks = false;
-				byte[] header = BitConverter.GetBytes(1); //heirarchy type
+				this.sendChunks = false;
+				byte[] header = BitConverter.GetBytes(1); // heirarchy type
 				Plugin.Logger.LogInfo("Sending a chunk");
-				//byte[] chunk = chunks[0];
 
-
-				byte[] chunk = chunks;
+				// byte[] chunk = chunks[0];
+				byte[] chunk = this.chunks;
 				packet = new byte[header.Length + chunk.Length];
 				Array.Copy(header, 0, packet, 0, header.Length);
 				Array.Copy(chunk, 0, packet, header.Length, chunk.Length);
 
-
 				Plugin.Logger.LogInfo("Sending Data");
 				try
 				{
-					//stream.Write(packet, 0, packet.Length);
-					SendPacket(packet, stream);
+					// stream.Write(packet, 0, packet.Length);
+					this.SendPacket(packet, stream);
 				}
 				catch (Exception e)
 				{
 					Plugin.Logger.LogError(e);
 				}
-				//chunks.RemoveAt(0);
+
+				// chunks.RemoveAt(0);
 			}
 
 			return packet;
@@ -264,16 +238,15 @@ namespace UnityPeekPlugin.GameObjects
 
 		public void StopSocketConnection()
 		{
-			isRunning = false;
-			socketThread?.Join();
+			this.isRunning = false;
+			this.socketThread?.Join();
 			Debug.LogError("Socket connection stopped.");
 		}
 
 		private void OnApplicationQuit()
 		{
-			StopSocketConnection();
+			this.StopSocketConnection();
 		}
-
 
 		private void DecodeRecivedData(byte[] buffer, int bytesRead)
 		{
@@ -291,7 +264,7 @@ namespace UnityPeekPlugin.GameObjects
 			}
 			else
 			{
-				//split the stuff before the :
+				// split the stuff before the :
 				parts = received.Split(':');
 				type = parts[0];
 			}
@@ -300,25 +273,26 @@ namespace UnityPeekPlugin.GameObjects
 			{
 				case "FetchHierarchy":
 					// Do something
-					unityPeekController.FetchHierachy();
+					this.UnityPeekController.FetchHierachy();
 					break;
 				case "SelectedNode":
-					unityPeekController.SelectedNode(parts[1]);
+					this.UnityPeekController.SelectedNode(parts[1]);
 					break;
 				case "ToggleTransformActive":
-					unityPeekController.ToggleTransformActive(parts[1], parts[2]);
+					this.UnityPeekController.ToggleTransformActive(parts[1], parts[2]);
 					break;
 				default:
 					Plugin.Logger.LogInfo("Unknown data recieved");
+
 					// Do something else
 					break;
 			}
 		}
 
-		static int timeStamp = 0;
 		public void SendObject(Transform transformToTransmit)
 		{
 			timeStamp++;
+
 			// Serialize the position, rotation, and scale of the transform into bytes
 			Vector3 position = transformToTransmit.position;
 			Quaternion rotation = transformToTransmit.rotation;
@@ -329,8 +303,7 @@ namespace UnityPeekPlugin.GameObjects
 				using (BinaryWriter writer = new BinaryWriter(memoryStream))
 				{
 					// Write position
-					//writer.Write((float)timeStamp);
-
+					// writer.Write((float)timeStamp);
 					writer.Write(transformToTransmit.name);
 					writer.Write(transformToTransmit.gameObject.activeSelf);
 
@@ -351,10 +324,10 @@ namespace UnityPeekPlugin.GameObjects
 				}
 
 				// Assign serialized data to dataToSend
-				dataToSend = memoryStream.ToArray();
+				this.dataToSend = memoryStream.ToArray();
 			}
 
-			//Plugin.Logger.LogError("TIMESTAMP SENT: " + timeStamp);
+			// Plugin.Logger.LogError("TIMESTAMP SENT: " + timeStamp);
 		}
 	}
 }

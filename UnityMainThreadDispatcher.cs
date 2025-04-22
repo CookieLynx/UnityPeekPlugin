@@ -1,47 +1,47 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEngine;
-
-namespace UnityPeekPlugin
+﻿namespace UnityPeekPlugin
 {
+	using System;
+	using System.Collections.Generic;
+	using UnityEngine;
 
-	//Main Thread dispacher https://github.com/PimDeWitte/UnityMainThreadDispatcher
-	//Used for calling Unity functions from other threads (like the network thread)
-
+	// Main Thread dispacher https://github.com/PimDeWitte/UnityMainThreadDispatcher
+	// Used for calling Unity functions from other threads (like the network thread)
 	public class UnityMainThreadDispatcher : MonoBehaviour
 	{
-		private static readonly Queue<Action> _executionQueue = new Queue<Action>();
+		private static readonly Queue<Action> ExecutionQueue = new Queue<Action>();
 
-		private static UnityMainThreadDispatcher _instance;
+		private static UnityMainThreadDispatcher instance;
 
 		public static UnityMainThreadDispatcher Instance()
 		{
-			if (_instance == null)
+			if (instance == null)
 			{
 				var obj = new GameObject("MainThreadDispatcher");
-				_instance = obj.AddComponent<UnityMainThreadDispatcher>();
+				instance = obj.AddComponent<UnityMainThreadDispatcher>();
 				DontDestroyOnLoad(obj);
 			}
-			return _instance;
+
+			return instance;
 		}
 
 		public void Enqueue(Action action)
 		{
-			lock (_executionQueue)
+			lock (ExecutionQueue)
 			{
-				_executionQueue.Enqueue(action);
+				ExecutionQueue.Enqueue(action);
 			}
 		}
 
-		void Update()
+		public void Update()
 		{
-			while (_executionQueue.Count > 0)
+			while (ExecutionQueue.Count > 0)
 			{
 				Action action;
-				lock (_executionQueue)
+				lock (ExecutionQueue)
 				{
-					action = _executionQueue.Dequeue();
+					action = ExecutionQueue.Dequeue();
 				}
+
 				action?.Invoke();
 			}
 		}
